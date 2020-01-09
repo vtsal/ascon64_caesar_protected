@@ -31,7 +31,7 @@ entity CipherCore_8bit is
         --! PreProcessor (data)
         keya, keyb      : in  std_logic_vector(8       -1 downto 0);
         bdia, bdib      : in  std_logic_vector(8      -1 downto 0);
-		  m					: in std_logic_vector(RW - 1 downto 0);
+		m			    : in std_logic_vector(RW - 1 downto 0);
         --! PreProcessor (controls)
         key_ready       : out std_logic;
         key_valid       : in  std_logic;
@@ -51,9 +51,9 @@ entity CipherCore_8bit is
         bdo_valid       : out std_logic;
         bdo_ready       : in  std_logic;
         bdo_size        : out std_logic_vector(G_LBS_BYTES+1    -1 downto 0);
-		  end_of_block		: out std_logic;
+		end_of_block	: out std_logic;
         msg_auth        : out std_logic;
-		  msg_auth_ready	: in std_logic;
+		msg_auth_ready	: in std_logic;
         msg_auth_valid  : out std_logic
     );
 end entity CipherCore_8bit;
@@ -66,10 +66,10 @@ architecture structural of CipherCore_8bit is
 	signal ld_bdo				: std_logic;
     signal sel_tag              : std_logic;
 	signal ld_ctr				: std_logic_vector(3 downto 0);
-	signal key_sel          : std_logic;
+	signal key_sel              : std_logic;
 
-    signal decrypt_reg     : std_logic;
-	 signal decrypt_last    : std_logic;
+    signal decrypt_reg          : std_logic;
+	signal decrypt_last         : std_logic;
     signal rc					: std_logic_vector(7 downto 0);
 	signal reg_ready            : std_logic;
 	signal perm_start           : std_logic;
@@ -82,51 +82,81 @@ architecture structural of CipherCore_8bit is
 	signal bank0_en             : std_logic;
 	signal bank1_en             : std_logic;
 	signal bank2_en             : std_logic;
-   signal perm_reset           : std_logic;
-   signal last_PT_sel          : std_logic;	 
+    signal perm_reset           : std_logic;
+    signal last_PT_sel          : std_logic;	 
+   
+   -- Added by Behnaz ------------------------------------
+    --=====================================================
+    signal     raReg_en         : std_logic;
+    signal     rbReg_en         : std_logic;
+    signal     c1a_en           : std_logic;
+    signal     c2a_en           : std_logic;
+    signal     c1b_en           : std_logic;
+    signal     c2b_en           : std_logic;
+    signal     d1a_en           : std_logic;
+    signal     d2a_en           : std_logic;
+    signal     d1b_en           : std_logic;
+    signal     d2b_en           : std_logic;
+    --=====================================================
 	 
 begin
 
     u_cc_dp:
     entity work.CipherCore_Datapath_8bit(structural)
     port map (
-        clk             => clk              ,
-        rst             => rst              ,
+        clk             => clk                ,
+        rst             => rst                ,
 
         --! Input Processor
         keya             => keya              ,
         keyb             => keyb              ,
-		  bdia             => bdia              ,
-		  bdib             => bdib              ,
-		  ld_ctr		    => ld_ctr			  ,
-		  m				 => m,
+		bdia             => bdia              ,
+		bdib             => bdib              ,
+		ld_ctr		     => ld_ctr			  ,
+		m				 => m                 ,
 
         --! Output Processor
         bdoa             => bdoa              ,
         bdob             => bdob              ,
-		  msg_auth_valid  => msg_auth_valid   ,
+--		msg_auth_valid   => msg_auth_valid    ,
+        msg_auth         => msg_auth          , -- Added by Behnaz
 
+        
         --! Controller
-		  decrypt        => decrypt_reg,
-		  decrypt_last   => decrypt_last,
-		  key_sel        => key_sel,
-        en_key          => en_key           ,
-        en_bdi          => en_bdi           ,
-		ld_bdo          => ld_bdo	        ,
-		en_bdo				=> en_bdo			  ,
-        clr_bdi         => clr_bdi          ,
-        sel_tag         => sel_tag          ,
-		rc					=> rc,
-		perm_start      => perm_start,
-	    perm_done       => perm_done,
-	    bank0_op1_sel   => bank0_op1_sel,
-        bank0_op2_sel   => bank0_op2_sel,	    
-		op1_sel         => op1_sel,
-		op2_sel         => op2_sel,
-	     bank0_en        => bank0_en,
-	     bank1_en        => bank1_en,
-	     bank2_en        => bank2_en,
-		 perm_reset      => perm_reset
+		decrypt         => decrypt_reg        ,
+		decrypt_last    => decrypt_last       ,
+		key_sel         => key_sel            ,
+        en_key          => en_key             ,
+        en_bdi          => en_bdi             ,
+		ld_bdo          => ld_bdo	          ,
+		en_bdo			=> en_bdo			  ,
+        clr_bdi         => clr_bdi            ,
+        sel_tag         => sel_tag            ,
+		rc				=> rc                 ,
+		perm_start      => perm_start         ,
+	    perm_done       => perm_done          ,
+	    bank0_op1_sel   => bank0_op1_sel      ,
+        bank0_op2_sel   => bank0_op2_sel      ,	    
+		op1_sel         => op1_sel            ,
+		op2_sel         => op2_sel            ,
+	    bank0_en        => bank0_en           ,
+	    bank1_en        => bank1_en           ,
+	    bank2_en        => bank2_en           ,
+		perm_reset      => perm_reset         ,
+		 
+		-- Added by Behnaz ------------------------------------
+        --=====================================================
+        raReg_en       => raReg_en            ,
+        rbReg_en       => rbReg_en            ,
+        c1a_en         => c1a_en              ,
+        c2a_en         => c2a_en              ,
+        c1b_en         => c1b_en              ,
+        c2b_en         => c2b_en              ,
+        d1a_en         => d1a_en              ,
+        d2a_en         => d2a_en              ,
+        d1b_en         => d1b_en              ,
+        d2b_en         => d2b_en
+        --=====================================================		
     );
 
     u_cc_ctrl:
@@ -140,41 +170,56 @@ begin
         key_valid       => key_valid        ,
         key_update      => key_update       ,
         decrypt         => decrypt          ,
-		  decrypt_reg_out => decrypt_reg      ,
-		  decrypt_last    => decrypt_last     ,
+		decrypt_reg_out => decrypt_reg      ,
+		decrypt_last    => decrypt_last     ,
         bdi_ready       => bdi_ready        ,
         bdi_valid       => bdi_valid        ,
-		  bdi_type      => bdi_type         ,
+		bdi_type        => bdi_type         ,
         bdi_eot         => bdi_eot          ,
         bdi_eoi         => bdi_eoi          ,
-		  key_sel	      => key_sel ,
+		key_sel	        => key_sel          ,
 
         ld_ctr_out      => ld_ctr           ,
         en_key          => en_key           ,
         en_bdi          => en_bdi           ,
-		  en_bdo			=> en_bdo			  ,
+		en_bdo			=> en_bdo		    ,
         clr_bdi         => clr_bdi          ,
-		  ld_bdo			=> ld_bdo			  ,
+		ld_bdo			=> ld_bdo			,
         sel_tag         => sel_tag          ,
 
-        rc				=> rc,
-	    perm_start      => perm_start,
-	    perm_done       => perm_done,
-	    bank0_op1_sel   => bank0_op1_sel,
-		bank0_op2_sel   => bank0_op2_sel,
-	    op1_sel         => op1_sel,
-		op2_sel         => op2_sel,
-		 bank0_en        => bank0_en,
-	    bank1_en        => bank1_en,
-	    bank2_en        => bank2_en,
-		perm_reset      => perm_reset,
+        rc				=> rc               ,
+	    perm_start      => perm_start       ,
+	    perm_done       => perm_done        ,
+	    bank0_op1_sel   => bank0_op1_sel    ,
+		bank0_op2_sel   => bank0_op2_sel    ,
+	    op1_sel         => op1_sel          ,
+		op2_sel         => op2_sel          ,
+		bank0_en        => bank0_en         ,
+	    bank1_en        => bank1_en         ,
+	    bank2_en        => bank2_en         ,
+		perm_reset      => perm_reset       ,
 
         --! Output
-        msg_auth        => msg_auth         ,
+--        msg_auth        => msg_auth         ,
+        msg_auth_valid  => msg_auth_valid   , -- Added by Behnaz
 		msg_auth_ready  => msg_auth_ready   ,
 		end_of_block    => end_of_block     ,
         bdo_ready       => bdo_ready        ,
-        bdo_valid       => bdo_valid
+        bdo_valid       => bdo_valid        ,
+        
+        -- Added by Behnaz ------------------------------------
+        --=====================================================
+        raReg_en       => raReg_en          ,
+        rbReg_en       => rbReg_en          ,
+        c1a_en         => c1a_en            ,
+        c2a_en         => c2a_en            ,
+        c1b_en         => c1b_en            ,
+        c2b_en         => c2b_en            ,
+        d1a_en         => d1a_en            ,
+        d2a_en         => d2a_en            ,
+        d1b_en         => d1b_en            ,
+        d2b_en         => d2b_en
+        --=====================================================	
     );
 
 end structural;

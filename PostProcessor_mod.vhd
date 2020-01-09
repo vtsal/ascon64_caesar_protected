@@ -62,13 +62,13 @@ entity PostProcessor_mod is
             cmd_valid       : in  STD_LOGIC;
             cmd_ready       : out STD_LOGIC;
             --!Output=================================================
-            do_data_a         : out STD_LOGIC_VECTOR(PW    -1 downto 0);
-            do_data_b         : out STD_LOGIC_VECTOR(PW    -1 downto 0);
+            do_data_a       : out STD_LOGIC_VECTOR(PW    -1 downto 0);
+            do_data_b       : out STD_LOGIC_VECTOR(PW    -1 downto 0);
 			do_valid        : out STD_LOGIC;
             do_ready        : in  STD_LOGIC;
-            msg_auth        : in  std_logic;
+            msg_auth_valid  : in  std_logic;
             msg_auth_ready  : out std_logic;
-            msg_auth_valid  : in  std_logic
+            msg_auth        : in  std_logic
 			--	state_debug     : out std_logic_vector(7 downto 0) -- optional
          );
 
@@ -516,11 +516,11 @@ end generate;
 					 
             when  S_VER_TAG_IN=>
  
-				if(msg_auth ='1')then 
-                    if(msg_auth_valid ='1')then
+--				if(msg_auth ='1')then 
+--                    if(msg_auth_valid ='1')then
 
-                --if(msg_auth_valid='1')then 
-                    --if(msg_auth='1')then
+                if(msg_auth_valid='1')then 
+                    if(msg_auth='1')then
                         nx_state <= S_STATUS_SUCCESS;
                     else
                         nx_state <= S_STATUS_FAIL;

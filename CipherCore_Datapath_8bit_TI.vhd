@@ -8,14 +8,15 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
+use IEEE.STD_LOGIC_UNSIGNED.ALL; -- Added by Behnaz
 use work.AEAD_pkg.all;
 use work.design_pkg.all;
 
 entity CipherCore_Datapath_8bit is
     generic (
-		  G_NPUB_SIZE         : integer := 128; -- default for aes-gcm
-		  G_DBLK_SIZE         : integer := 64; --default for aes-gcm
-		  G_KEY_SIZE		    : integer := 128 --default for aes-gcm
+		  G_NPUB_SIZE       : integer := 128; -- default for aes-gcm
+		  G_DBLK_SIZE       : integer := 64; --default for aes-gcm
+		  G_KEY_SIZE		: integer := 128 --default for aes-gcm
     );
     port    (
         clk                 : in  std_logic;
@@ -25,7 +26,7 @@ entity CipherCore_Datapath_8bit is
         bdia, bdib          : in  std_logic_vector(8 - 1 downto 0):=(others => '0');
         keya, keyb          : in  std_logic_vector(8 - 1 downto 0);
   	    ld_ctr			    : in  std_logic_vector(3 downto 0);
-		 m : in std_logic_vector(RW  -1  downto 0);
+		 m                  : in std_logic_vector(RW  -1  downto 0);
 
         --! Control
         decrypt             : in std_logic;
@@ -51,8 +52,23 @@ entity CipherCore_Datapath_8bit is
 		sel_tag           : in std_logic;
         --! Output
         bdoa, bdob        : out std_logic_vector(8 - 1 downto 0);
-		msg_auth_valid	  : out std_logic
+--		msg_auth_valid	  : out std_logic;
+        msg_auth	      : out std_logic;
 		--state_debug		    : out std_logic_vector(11 downto 0)
+		
+		-- Added by Behnaz ------------------------------------
+        --=====================================================
+        raReg_en       : in std_logic;
+        rbReg_en       : in std_logic;
+        c1a_en         : in std_logic;
+        c2a_en         : in std_logic;
+        c1b_en         : in std_logic;
+        c2b_en         : in std_logic;
+        d1a_en         : in std_logic;
+        d2a_en         : in std_logic;
+        d1b_en         : in std_logic;
+        d2b_en         : in std_logic
+        --=====================================================
     );
 
 end entity CipherCore_Datapath_8bit;
@@ -129,6 +145,19 @@ architecture structural of CipherCore_Datapath_8bit is
 
 	signal x0_outa, x1_outa, x2_outa, x3_outa, x4_outa : std_logic_vector(63 downto 0);
 	signal x0_outb, x1_outb, x2_outb, x3_outb, x4_outb : std_logic_vector(63 downto 0);
+
+    -- Added by Behnaz ----------------------------------------------------------------------------
+    --=============================================================================================
+    signal ra, rb           : std_logic_vector(63 downto 0);  
+    signal c1a_in, c1a_out  : std_logic_vector(63 downto 0);
+    signal c2a_in, c2a_out  : std_logic_vector(63 downto 0);
+    signal c1b_in, c1b_out  : std_logic_vector(63 downto 0);
+    signal c2b_in, c2b_out  : std_logic_vector(63 downto 0);
+    signal d1a_in, d1a_out  : std_logic_vector(63 downto 0);
+    signal d2a_in, d2a_out  : std_logic_vector(63 downto 0);
+    signal d1b_in, d1b_out  : std_logic_vector(63 downto 0);
+    signal d2b_in, d2b_out  : std_logic_vector(63 downto 0);
+    --=============================================================================================
 
 	begin
 
@@ -435,6 +464,108 @@ architecture structural of CipherCore_Datapath_8bit is
         d => next_bdo_regb,
         q => bdo_regb
     );
+    
+    
+    --- Added by Behnaz ---------------------------------------------------------------------------
+    --=============================================================================================
+    raReg: entity work.reg_n(behavioral) -- Register random share for 64-MSB of the Tag
+    generic map(N => 64)
+    Port map(
+        clk     => clk,
+        en      => raReg_en,
+        d       => m(63 downto 0),
+        q       => ra
+    );
+    
+    rbReg: entity work.reg_n(behavioral) -- Register random share for 64-LSB of the Tag
+    generic map(N => 64)
+    Port map(
+        clk     => clk,
+        en      => rbReg_en,
+        d       => m(63 downto 0),
+        q       => rb
+    );
+    
+    c1a_in      <= full_taga(127 downto 64) xor bdi_data_rega(127 downto 64);
+    c1aReg: entity work.reg_n(behavioral) 
+    generic map(N => 64)
+    Port map(
+        clk     => clk,
+        en      => c1a_en,
+        d       => c1a_in,
+        q       => c1a_out
+    );
+    
+    c2a_in      <= full_tagb(127 downto 64) xor bdi_data_regb(127 downto 64);       
+    c2aReg: entity work.reg_n(behavioral)
+    generic map(N => 64)
+    Port map(
+        clk     => clk,
+        en      => c2a_en,
+        d       => c2a_in,
+        q       => c2a_out
+    );
+    
+    c1b_in      <= full_taga(63 downto 0) xor bdi_data_rega(63 downto 0);
+    c1bReg: entity work.reg_n(behavioral)
+    generic map(N => 64)
+    Port map(
+        clk     => clk,
+        en      => c1b_en,
+        d       => c1b_in,
+        q       => c1b_out
+    );
+      
+    c2b_in      <= full_tagb(63 downto 0) xor bdi_data_regb(63 downto 0);
+    c2bReg: entity work.reg_n(behavioral)
+    generic map(N => 64)
+    Port map(
+        clk     => clk,
+        en      => c2b_en,
+        d       => c2b_in,
+        q       => c2b_out
+    );
+
+    d1a_in      <= c1a_out xor c2a_out xor ra;
+    d1aReg: entity work.reg_n(behavioral)
+    generic map(N => 64)
+    Port map(
+        clk     => clk,
+        en      => d1a_en,
+        d       => d1a_in,
+        q       => d1a_out
+    );
+    
+    d2a_in      <=  d1a_out xor ra;
+    d2aReg: entity work.reg_n(behavioral)
+    generic map(N => 64)
+    Port map(
+        clk     => clk,
+        en      => d2a_en,
+        d       => d2a_in,
+        q       => d2a_out
+    );
+    
+    d1b_in      <= c1b_out xor c2b_out xor rb;
+    d1bReg: entity work.reg_n(behavioral)
+    generic map(N => 64)
+    Port map(
+        clk     => clk,
+        en      => d1b_en,
+        d       => d1b_in,
+        q       => d1b_out
+    ); 
+    
+    d2b_in      <= d1b_out xor rb;
+    d2bReg: entity work.reg_n(behavioral)
+    generic map(N => 64)
+    Port map(
+        clk     => clk,
+        en      => d2b_en,
+        d       => d2b_in,
+        q       => d2b_out
+    ); 
+    --=============================================================================================
 
 -- write tag
 
@@ -497,8 +628,13 @@ architecture structural of CipherCore_Datapath_8bit is
 	--full_tag_cmpa <= full_taga xor bdi_data_rega;
 	--full_tag_cmpb <= full_tagb xor bdi_data_regb;
 	--msg_auth_valid <= '1' when (full_tag_cmpa = full_tag_cmpb) else '0'; -- exp tag
-	msg_auth_valid <= '1'; -- only for t-test
+--	msg_auth_valid <= '1'; -- only for t-test
 	
 	--msg_auth_valid <= '1' when (full_tag = bdi_data_reg) else '0'; -- exp tag
+	
+	-- Added by Behnaz ---------------------------------------------------------
+    --==========================================================================
+    msg_auth <= '1' when ((d2a_out = 0) and (d2b_out = 0)) else '0';
+    --==========================================================================
 	 
 end architecture structural;

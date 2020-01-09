@@ -13,48 +13,63 @@ use ieee.numeric_std.all;
 
 entity CipherCore_Controller_8bit is
     port (
-	 clk : std_logic;
-	 rst : std_logic;
+	 clk                : in std_logic;
+	 rst                : in std_logic;
 	 
-	 bdi_ready : out std_logic;
-	 bdi_valid : in std_logic;
-	 bdo_ready : in std_logic;
-	 bdo_valid : out std_logic;
-	 key_update : in std_logic;
-	 key_valid  : in std_logic;
-	 key_ready  : out std_logic;
-	 bdi_eoi    : in std_logic;
-	 bdi_eot    : in std_logic;
-    bdi_type   : in std_logic_vector(3 downto 0);
-    end_of_block : out std_logic;
-	 decrypt    : in std_logic;
+	 bdi_ready          : out std_logic;
+	 bdi_valid          : in std_logic;
+	 bdo_ready          : in std_logic;
+	 bdo_valid          : out std_logic;
+	 key_update         : in std_logic;
+	 key_valid          : in std_logic;
+	 key_ready          : out std_logic;
+	 bdi_eoi            : in std_logic;
+	 bdi_eot            : in std_logic;
+     bdi_type           : in std_logic_vector(3 downto 0);
+     end_of_block       : out std_logic;
+	 decrypt            : in std_logic;
 	 
-	 msg_auth	: out std_logic;
-     ld_ctr_out : out std_logic_vector(3 downto 0);
+--	 msg_auth	        : out std_logic;
+     msg_auth_valid	    : out std_logic; -- Added by Behnaz
+     ld_ctr_out         : out std_logic_vector(3 downto 0);
 
-	sel_tag             : out  std_logic;
-   en_key              : out  std_logic;
-    clr_bdi             : out  std_logic;
-    en_bdi              : out  std_logic;
-    en_bdo              : out  std_logic;
-    ld_bdo	    	    : out  std_logic;
-    msg_auth_ready      : in std_logic;
-	
+	 sel_tag            : out  std_logic;
+     en_key             : out  std_logic;
+     clr_bdi            : out  std_logic;
+     en_bdi             : out  std_logic;
+     en_bdo             : out  std_logic;
+     ld_bdo	    	    : out  std_logic;
+     msg_auth_ready     : in std_logic;
+ 	
 	 decrypt_reg_out    : out std_logic;
 	 decrypt_last       : out std_logic;
-    rc					: out std_logic_vector(7 downto 0);
-	perm_start          : out std_logic;
-	perm_done           : in std_logic;
-	bank0_op1_sel           : out  std_logic_vector(1 downto 0);
-	bank0_op2_sel           : out std_logic_vector(1 downto 0);
-	op1_sel           : out std_logic_vector(1 downto 0);
-	op2_sel           : out std_logic_vector(1 downto 0);
-	bank0_en            : out std_logic;
-	bank1_en            : out std_logic;
-	bank2_en            : out std_logic;
-	key_sel               : out std_logic;
-	perm_reset          : out std_logic
+     rc					: out std_logic_vector(7 downto 0);
+	 perm_start         : out std_logic;
+	 perm_done          : in std_logic;
+	 bank0_op1_sel      : out  std_logic_vector(1 downto 0);
+	 bank0_op2_sel      : out std_logic_vector(1 downto 0);
+	 op1_sel            : out std_logic_vector(1 downto 0);
+	 op2_sel            : out std_logic_vector(1 downto 0);
+	 bank0_en           : out std_logic;
+	 bank1_en           : out std_logic;
+	 bank2_en           : out std_logic;
+	 key_sel            : out std_logic;
+	 perm_reset         : out std_logic;
 	 --state_debug		   : out std_logic_vector(7 downto 0) -- profiler
+	 
+	 -- Added by Behnaz ------------------------------------
+     --=====================================================
+     raReg_en           : out std_logic;
+     rbReg_en           : out std_logic;
+     c1a_en             : out std_logic;
+     c2a_en             : out std_logic;
+     c1b_en             : out std_logic;
+     c2b_en             : out std_logic;
+     d1a_en             : out std_logic;
+     d2a_en             : out std_logic;
+     d1b_en             : out std_logic;
+     d2b_en             : out std_logic
+     --=====================================================
 
      );
 end CipherCore_Controller_8bit;
@@ -70,8 +85,9 @@ architecture behavioral of CipherCore_Controller_8bit is
 
     type state_type is (S_RESET, S_CHECK_KEY, S_LOAD_KEY, S_LOAD_NPUB, S_LOCK_INIT, S_START_INIT, S_PREP_LOAD,
                         S_NO_AD_OR_PT, S_FINISH_INT1, S_FINISH_INT2, S_LOAD_AD, S_PREP_AD, S_START_AD,
-						      S_FINISH_AD, S_WAIT_AD1, S_WAIT_AD2, S_LOAD_PT, S_PREP_PT, S_START_PT, S_RESULT_OUT, S_FINISH_PT, 
-						      S_PREP_FINAL, S_START_FINAL, S_LOAD_EXP_TAG, S_WAIT_TAG, S_TAG, S_START_FULL_AD, S_WAIT_PT_FULL	
+						S_FINISH_AD, S_WAIT_AD1, S_WAIT_AD2, S_LOAD_PT, S_PREP_PT, S_START_PT, S_RESULT_OUT, S_FINISH_PT, 
+						S_PREP_FINAL, S_START_FINAL, S_LOAD_EXP_TAG, S_WAIT_TAG, S_TAG, S_START_FULL_AD, S_WAIT_PT_FULL,
+						verify_tag1, verify_tag2, verify_tag3, verify_tag4, verify_tag5, verify_tag6 -- Added by Behnaz	
                    );
 
     signal current_state, next_state : state_type;
@@ -185,7 +201,8 @@ ld_bdo <= '0';
 clr_ld_ctr <= '0';
 en_ld_ctr <= '0';
 set_wr_ctr <= '0';
-msg_auth <= '0';
+--msg_auth <= '0';
+msg_auth_valid <= '0'; -- Added by Behnaz
 sel_tag <= '0';
 en_decrypt_reg <= '0';
 decrypt_last <= '0';
@@ -214,6 +231,20 @@ op1_sel <= "00";
 op2_sel <= "00";
 key_sel <= '0';
 perm_reset <= '0';
+
+-- Added by Behnaz -------------------------------
+--================================================
+raReg_en  <= '0';
+rbReg_en  <= '0';
+c1a_en    <= '0';
+c2a_en    <= '0';
+c1b_en    <= '0';
+c2b_en    <= '0';
+d1a_en    <= '0';
+d2a_en    <= '0';
+d1b_en    <= '0';
+d2b_en    <= '0';
+--================================================
 
 --state_debug <= x"00"; -- profiler default
 
@@ -333,11 +364,11 @@ case current_state is
 			bank0_op1_sel <= "10";
 			bank0_op2_sel <= "00";
 			bank0_en <= '1';
-     	   op1_sel <= "01";
-         op2_sel <= "00";
-		   key_sel <= '1';
-		   bank2_en <= '1';
-   		next_state <= S_PREP_FINAL;
+     	    op1_sel <= "01";
+            op2_sel <= "00";
+		    key_sel <= '1';
+		    bank2_en <= '1';
+   		    next_state <= S_PREP_FINAL;
 		else
 			next_state <= S_NO_AD_OR_PT;
 		end if;
@@ -601,27 +632,37 @@ case current_state is
 		    next_state <= S_LOAD_EXP_TAG;
 	     end if;
 					
-   when S_WAIT_TAG => 
+    when S_WAIT_TAG => 
 
 		if (perm_done = '1') then
 			op1_sel <= "01";
 			op2_sel <= "00";
 			bank2_en <= '1';
-			next_state <= S_TAG;
+--			next_state <= S_TAG;
+
+             --- Added by Behnaz ---------------------------------------------------------------------------
+            --=============================================================================================  
+			if (decrypt_reg = '1') then
+			     next_state <= verify_tag1;
+			else
+			     next_state <= S_TAG;
+			end if;
+			--=============================================================================================  
+			
 		else
 			next_state <= S_WAIT_TAG;
 		end if;
 		
 	when S_TAG => 
 	
-		if (decrypt_reg = '1') then
-			if (msg_auth_ready = '1') then
-				msg_auth <= '1';
-				next_state <= S_RESET;
-			else
-				next_state <= S_TAG;
-			end if;
-		else
+--		if (decrypt_reg = '1') then
+--			if (msg_auth_ready = '1') then
+--				msg_auth <= '1';
+--				next_state <= S_RESET;
+--			else
+--				next_state <= S_TAG;
+--			end if;
+--		else
 			if (bdo_ready = '1') then
 				bdo_valid <= '1';
 				en_bdo <= '1';
@@ -636,7 +677,43 @@ case current_state is
 			else
 				next_state <= S_TAG;
 			end if;
-		end if;
+--		end if;
+		
+      --- Added by Behnaz ---------------------------------------------------------------------------
+      --=============================================================================================     
+      when verify_tag1 =>
+            c1a_en      <= '1'; 
+            next_state  <= verify_tag2;
+                
+      when verify_tag2 => 
+            raReg_en    <= '1';   
+            c2a_en      <= '1';
+            c1b_en      <= '1';
+            next_state  <= verify_tag3;
+                
+      when verify_tag3 => 
+            rbReg_en    <= '1'; 
+            d1a_en      <= '1';
+            c2b_en      <= '1'; 
+            next_state  <= verify_tag4;
+        
+      when verify_tag4 =>                              
+            d1b_en      <= '1';
+            d2a_en      <= '1';
+            next_state  <= verify_tag5;
+            
+      when verify_tag5 =>                              
+            d2b_en      <= '1';
+            next_state  <= verify_tag6;
+      
+      when verify_tag6 =>
+            if (msg_auth_ready = '1') then
+                msg_auth_valid  <= '1'; 
+                next_state      <= S_RESET;
+            else
+                next_state      <= verify_tag6;
+            end if;
+      --=============================================================================================   
 		
     when others => 
 	

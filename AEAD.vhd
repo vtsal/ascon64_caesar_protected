@@ -41,7 +41,7 @@ entity AEAD is
     generic (
         G_W             : integer := PW;
         G_SW            : integer := SW;
-		  G_RW            : integer := RW;
+		G_RW            : integer := RW;
         --! Reset behavior
         G_ASYNC_RSTN    : boolean := False;  --! Async active low reset        
         --! Block size (bits)
@@ -55,24 +55,27 @@ entity AEAD is
         clk             : in  std_logic;
         rst             : in  std_logic;
         --! Publica data ports
-        pdi_data_a        : in  std_logic_vector(PW             -1 downto 0);
-        pdi_data_b        : in  std_logic_vector(PW             -1 downto 0);
+        pdi_data_a      : in  std_logic_vector(PW             -1 downto 0);
+        pdi_data_b      : in  std_logic_vector(PW             -1 downto 0);
+--        pdi_data        : in  std_logic_vector(PW * 2             -1 downto 0);
         pdi_valid       : in  std_logic;
         pdi_ready       : out std_logic;
         --! Secret data ports
-        sdi_data_a        : in  std_logic_vector(SW             -1 downto 0);
-        sdi_data_b        : in  std_logic_vector(SW             -1 downto 0);
+        sdi_data_a      : in  std_logic_vector(SW             -1 downto 0);
+        sdi_data_b      : in  std_logic_vector(SW             -1 downto 0);
+--        sdi_data        : in  std_logic_vector(SW * 2             -1 downto 0);
         sdi_valid       : in  std_logic;
         sdi_ready       : out std_logic;
         --! Data out ports
-        do_data_a         : out std_logic_vector(PW             -1 downto 0);
-        do_data_b         : out std_logic_vector(PW             -1 downto 0);
+        do_data_a       : out std_logic_vector(PW             -1 downto 0);
+        do_data_b       : out std_logic_vector(PW             -1 downto 0);
+--        do_data         : out std_logic_vector(PW * 2             -1 downto 0);
         do_ready        : in  std_logic;
         do_valid        : out std_logic;
 		  --! random inputs
-		  rdi_data         : in std_logic_vector(RW - 1 downto 0);
-		  rdi_valid			 : in std_logic;
-		  rdi_ready        : out std_logic
+		rdi_data        : in std_logic_vector(RW - 1 downto 0);
+		rdi_valid		: in std_logic;
+		rdi_ready       : out std_logic
     );
 end AEAD;
 
@@ -175,7 +178,7 @@ begin
                 key_ready       => key_ready_cipher_in                     ,
                 bdia            => bdi_cipher_in_a                         ,
                 bdib            => bdi_cipher_in_b                         ,
-					 m					  => rdi_data,
+				m				=> rdi_data                                ,
                 bdi_valid       => bdi_valid_cipher_in                     ,
                 bdi_ready       => bdi_ready_cipher_in                     ,
                 bdi_partial     => bdi_partial_cipher_in                   ,

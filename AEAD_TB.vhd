@@ -20,7 +20,7 @@ library ieee;
 use ieee.std_logic_1164.ALL;
 use ieee.numeric_std.all;
 use ieee.std_logic_textio.all;
-use work.std_logic_1164_additions.all;
+--use work.std_logic_1164_additions.all;
 use work.AEAD_pkg.all;
 use work.design_pkg.all;
 
@@ -40,11 +40,11 @@ entity AEAD_TB IS
         G_LOG2_FIFODEPTH    : integer := 8;
         G_PWIDTH            : integer := PW;
         G_SWIDTH            : integer := SW;
-		  G_RWIDTH            : integer := RW;
+		G_RWIDTH            : integer := RW;
         G_PERIOD            : time    := 10 ns;
-        G_FNAME_PDI         : string  := "pdi2.txt";
-        G_FNAME_SDI         : string  := "sdi2.txt";
-        G_FNAME_DO          : string  := "do2.txt";
+        G_FNAME_PDI         : string  := "pdi.txt";
+        G_FNAME_SDI         : string  := "sdi.txt";
+        G_FNAME_DO          : string  := "do.txt";
         G_FNAME_LOG         : string  := "log.txt";
         G_FNAME_RESULT      : string  := "result.txt"
     );
@@ -267,19 +267,19 @@ begin
         clk          => clk,
         pdi_data_a   => pdi_delayed_a,
         pdi_data_b   => pdi_delayed_b,
-		  pdi_ready    => pdi_ready,
+		pdi_ready    => pdi_ready,
         pdi_valid    => pdi_valid,
         sdi_data_a   => sdi_delayed_a,
         sdi_data_b   => sdi_delayed_b,
-		  sdi_ready    => sdi_ready,
+		sdi_ready    => sdi_ready,
         sdi_valid    => sdi_valid,
         do_data_a    => do_a,
         do_data_b    => do_b,
-		  do_valid     => do_valid,
+		do_valid     => do_valid,
         do_ready     => do_ready,
-		  rdi_data     => (others => '0'),
-		  rdi_valid    => '1',
-		  rdi_ready    => open
+		rdi_data     => (others => '0'),
+		rdi_valid    => '1',
+		rdi_ready    => open
     );
     --! =================== --
     --! END OF PORT MAPPING --
